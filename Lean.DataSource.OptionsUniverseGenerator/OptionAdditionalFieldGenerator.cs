@@ -24,11 +24,11 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
 {
     public class OptionAdditionalFieldGenerator : DerivativeUniverseGenerator.AdditionalFieldGenerator
     {
-        private const string _impliedVolHeader = "impliedvolatility";
+        private const string _impliedVolHeader = "implied_volatility";
         private const string _deltaHeader = "delta";
         private const string _priceHeader = "close";
-        private const string _sidHeader = "symbol_id";
-        private const string _tickerHeader = "symbol";
+        private const string _sidHeader = "#symbol_id";
+        private const string _tickerHeader = "symbol_value";
 
         public OptionAdditionalFieldGenerator(DateTime processingDate, string rootPath)
             : base(processingDate, rootPath)
@@ -45,10 +45,11 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
                     var ivs = GetIvs(_processingDate, subFolder, out var latestFile);
                     var prices = GetColumn(latestFile, _priceHeader);
                     var symbols = GetSymbols(latestFile, _sidHeader, _tickerHeader);
-                    var symbolPrices = CreateDictionary(symbols, prices);
+                    var symbolPrices = CreateContractDictionary(symbols, prices);
+                    var underlyingPrice = prices[0];
 
                     var additionalFields = new OptionAdditionalFields();
-                    additionalFields.Update(ivs, symbolPrices);
+                    additionalFields.Update(_processingDate, underlyingPrice, ivs, symbolPrices);
 
                     WriteToCsv(latestFile, additionalFields);
                 }
@@ -108,15 +109,16 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
                 .First();
         }
 
-        private Dictionary<TKey, TValue> CreateDictionary<TKey, TValue>(List<TKey> keys, List<TValue> values)
+        private Dictionary<TKey, TValue> CreateContractDictionary<TKey, TValue>(List<TKey> keys, List<TValue> values)
         {
             if (keys.Count != values.Count)
             {
-                throw new ArgumentException("OptionAdditionalFieldGenerator.CreateDictionary(): The two lists must have the same number of elements.");
+                throw new ArgumentException("OptionAdditionalFieldGenerator.CreateContractDictionary(): The two lists must have the same number of elements.");
             }
 
             Dictionary<TKey, TValue> dictionary = new Dictionary<TKey, TValue>();
-            for (int i = 0; i < keys.Count; i++)
+            // Skip underlying row
+            for (int i = 1; i < keys.Count; i++)
             {
                 dictionary[keys[i]] = values[i];
             }

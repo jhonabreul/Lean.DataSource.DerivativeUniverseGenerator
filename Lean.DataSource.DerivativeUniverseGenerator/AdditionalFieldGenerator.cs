@@ -93,7 +93,8 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
                 throw new Exception($"AdditionalFieldGenerator.GetColumn(): {header} not found in header row");
             }
 
-            return lines.Select(line => decimal.Parse(line.Split(',')[headerIndex]))
+            return lines.Skip(1)        // header row
+                .Select(line => decimal.Parse(line.Split(',')[headerIndex]))
                 .ToList();
         }
 
@@ -119,12 +120,14 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
                 throw new Exception($"AdditionalFieldGenerator.GetColumn(): [{sidHeaderIndex}, {tickerHeaderIndex}] not found in header row");
             }
 
-            return lines.Select(line =>
-            {
-                var items = line.Split(',');
-                var sid = SecurityIdentifier.Parse(items[sidHeaderIndex]);
-                return new Symbol(sid, items[tickerHeaderIndex]);
-            }).ToList();
+            return lines.Skip(1)        // header row
+                .Select(line =>
+                {
+                    var items = line.Split(',');
+                    var sid = SecurityIdentifier.Parse(items[sidHeaderIndex]);
+                    return new Symbol(sid, items[tickerHeaderIndex]);
+                })
+                .ToList();
         }
     }
 }
