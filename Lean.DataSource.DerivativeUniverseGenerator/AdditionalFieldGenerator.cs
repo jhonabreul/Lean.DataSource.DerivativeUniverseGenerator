@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -70,6 +71,60 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
             }
 
             File.WriteAllLines(csvPath, csv);
+        }
+
+        /// <summary>
+        /// Get a column's values as list
+        /// </summary>
+        /// <param name="csvPath">Path of the csv file</param>
+        /// <param name="header">Header of the column required</param>
+        /// <returns>List of value of the selected column</returns>
+        /// <exception cref="Exception">Header not found</exception>
+        protected List<decimal> GetColumn(string csvPath, string header)
+        {
+            var lines = File.ReadAllLines(csvPath)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList();
+            var headers = lines[0].Split(',');
+            var headerIndex = Array.IndexOf(headers, header);
+
+            if (headerIndex == -1)
+            {
+                throw new Exception($"AdditionalFieldGenerator.GetColumn(): {header} not found in header row");
+            }
+
+            return lines.Select(line => decimal.Parse(line.Split(',')[headerIndex]))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Get a list of option contract symbols
+        /// </summary>
+        /// <param name="csvPath">Path of the csv file</param>
+        /// <param name="sidHeader">Header of the SID column</param>
+        /// <param name="tickerHeader">Header of the ticker column</param>
+        /// <returns>List of Symbol object of the whole option chain</returns>
+        /// <exception cref="Exception">Header(s) not found</exception>
+        protected List<Symbol> GetSymbols(string csvPath, string sidHeader, string tickerHeader)
+        {
+            var lines = File.ReadAllLines(csvPath)
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList();
+            var headers = lines[0].Split(',');
+            var sidHeaderIndex = Array.IndexOf(headers, sidHeader);
+            var tickerHeaderIndex = Array.IndexOf(headers, tickerHeader);
+
+            if (sidHeaderIndex == -1 || tickerHeaderIndex == -1)
+            {
+                throw new Exception($"AdditionalFieldGenerator.GetColumn(): [{sidHeaderIndex}, {tickerHeaderIndex}] not found in header row");
+            }
+
+            return lines.Select(line =>
+            {
+                var items = line.Split(',');
+                var sid = SecurityIdentifier.Parse(items[sidHeaderIndex]);
+                return new Symbol(sid, items[tickerHeaderIndex]);
+            }).ToList();
         }
     }
 }

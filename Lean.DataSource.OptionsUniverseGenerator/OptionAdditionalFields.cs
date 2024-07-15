@@ -13,6 +13,7 @@
  * limitations under the License.
 */
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -35,18 +36,28 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
         /// <remarks>The ratio of the current implied volatility baing higher than that over the past year</remarks>
         public decimal IvPercentile { get; set; }
 
-        public string Header => "ivrank,ivpercentile";
+        /// <summary>
+        /// Volatility Index
+        /// </summary>
+        public decimal? Vix { get; set; }
 
-        public string Content => $"{IvRank},{IvPercentile}";
+        public string Header => "ivrank,ivpercentile,vix";
+
+        public string Content => $"{IvRank},{IvPercentile},{WriteNullableField(Vix)}";
 
         /// <summary>
         /// Update the additional fields
         /// </summary>
+        /// <param name="currentDate">Current datetime</param>
+        /// <param name="underlyingPrice">Current price of the underlying</param>
         /// <param name="ivs">List of past year's ATM implied volatilities</param>
-        public void Update(List<decimal> ivs)
+        /// <param name="symbolPrices">Option contract symbols and their corresponding option prices</param>
+        public void Update(DateTime currentDate, decimal underlyingPrice, List<decimal> ivs, Dictionary<Symbol, decimal> symbolPrices)
         {
             CalculateIvRank(ivs);
             CalculateIvPercentile(ivs);
+
+            CalculateVix(currentDate, underlyingPrice, symbolPrices);
         }
 
         // source: https://www.tastylive.com/concepts-strategies/implied-volatility-rank-percentile
@@ -61,6 +72,18 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
         {
             var daysBelowCurrentIv = ivs.Count(x => x < ivs[^1]);
             IvPercentile = daysBelowCurrentIv / ivs.Count;
+        }
+
+        private void CalculateVix(DateTime currentDate, decimal underlyingPrice, Dictionary<Symbol, decimal> symbolPrices)
+        {
+            var vixIndicator = new Vix(symbolPrices);
+            var vix = vixIndicator.CalculateVix(currentDate, underlyingPrice);
+            Vix = vix <= 0m ? null : vix;
+        }
+
+        private string WriteNullableField(decimal? field)
+        {
+            return field.HasValue ? field.Value.ToString() : string.Empty;
         }
     }
 }

@@ -24,8 +24,11 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
 {
     public class OptionAdditionalFieldGenerator : DerivativeUniverseGenerator.AdditionalFieldGenerator
     {
-        private const string impliedVolHeader = "impliedvolatility";
-        private const string deltaHeader = "delta";
+        private const string _impliedVolHeader = "impliedvolatility";
+        private const string _deltaHeader = "delta";
+        private const string _priceHeader = "close";
+        private const string _sidHeader = "symbol_id";
+        private const string _tickerHeader = "symbol";
 
         public OptionAdditionalFieldGenerator(DateTime processingDate, string rootPath)
             : base(processingDate, rootPath)
@@ -40,9 +43,13 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
                 foreach (var subFolder in Directory.GetDirectories(_rootPath))
                 {
                     var ivs = GetIvs(_processingDate, subFolder, out var latestFile);
-                    var additionalFields = new OptionAdditionalFields();
+                    var prices = GetColumn(latestFile, _priceHeader);
+                    var symbols = GetSymbols(latestFile, _sidHeader, _tickerHeader);
+                    var symbolPrices = CreateDictionary(symbols, prices);
 
-                    additionalFields.Update(ivs);
+                    var additionalFields = new OptionAdditionalFields();
+                    additionalFields.Update(ivs, symbolPrices);
+
                     WriteToCsv(latestFile, additionalFields);
                 }
             }
@@ -61,7 +68,8 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
             // get i-year ATM IVs to calculate IV rank and percentile
             var lastYearFiles = Directory.EnumerateFiles(path, "*.csv")
                 .AsParallel()
-                .Where(file => DateTime.TryParseExact(Path.GetFileNameWithoutExtension(file), "yyyyMMdd", null, DateTimeStyles.None, out var fileDate)
+                .Where(file => DateTime.TryParseExact(Path.GetFileNameWithoutExtension(file), "yyyyMMdd", 
+                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var fileDate)
                     && fileDate > currentDateTime.AddYears(-1)
                     && fileDate <= currentDateTime)
                 .OrderBy(file => file)
@@ -78,8 +86,8 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
                 .Where(s => !string.IsNullOrWhiteSpace(s))
                 .ToList();
             var headers = lines[0].Split(',');
-            int deltaIndex = Array.IndexOf(headers, deltaHeader);
-            int ivIndex = Array.IndexOf(headers, impliedVolHeader);
+            int deltaIndex = Array.IndexOf(headers, _deltaHeader);
+            int ivIndex = Array.IndexOf(headers, _impliedVolHeader);
 
             if (deltaIndex == -1 || ivIndex == -1)
             {
@@ -98,6 +106,22 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
                 .OrderBy(x => Math.Abs(x.Delta - 0.5m))
                 .Select(x => x.ImpliedVolatility)
                 .First();
+        }
+
+        private Dictionary<TKey, TValue> CreateDictionary<TKey, TValue>(List<TKey> keys, List<TValue> values)
+        {
+            if (keys.Count != values.Count)
+            {
+                throw new ArgumentException("OptionAdditionalFieldGenerator.CreateDictionary(): The two lists must have the same number of elements.");
+            }
+
+            Dictionary<TKey, TValue> dictionary = new Dictionary<TKey, TValue>();
+            for (int i = 0; i < keys.Count; i++)
+            {
+                dictionary[keys[i]] = values[i];
+            }
+
+            return dictionary;
         }
     }
 }
