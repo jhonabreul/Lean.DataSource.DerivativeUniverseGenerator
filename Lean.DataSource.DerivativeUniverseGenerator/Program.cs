@@ -73,19 +73,19 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
                 Environment.Exit(1);
             }
 
-            var optionsAdditionalFieldsGenerator = new AdditionalFieldGenerator(processingDate, outputFolderRoot);
+            var optionsAdditionalFieldsGenerator = GetAdditionalFieldGenerator(processingDate, outputFolderRoot);
 
             try
             {
                 if (!optionsAdditionalFieldsGenerator.Run())
                 {
-                    Log.Error($"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): Failed to generate options universe.");
+                    Log.Error($"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): Failed to generate additional fields to option universes.");
                     Environment.Exit(1);
                 }
             }
             catch (Exception ex)
             {
-                Log.Error(ex, $"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): Error generating options universe.");
+                Log.Error(ex, $"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): Error generating additional fields to option universes.");
                 Environment.Exit(1);
             }
 
@@ -96,6 +96,8 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
 
         protected abstract DerivativeUniverseGenerator GetUniverseGenerator(SecurityType securityType, string market, string dataFolderRoot,
             string outputFolderRoot, DateTime processingDate);
+
+        protected abstract AdditionalFieldGenerator GetAdditionalFieldGenerator(DateTime processingDate, string rootFolder);
 
         /// <summary>
         /// Validate and extract command line args and configuration options.

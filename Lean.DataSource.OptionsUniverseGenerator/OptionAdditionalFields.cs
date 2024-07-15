@@ -16,20 +16,22 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace QuantConnect.DataSource.DerivativeUniverseGenerator
+namespace QuantConnect.DataSource.OptionsUniverseGenerator
 {
     /// <summary>
     /// Calculate any additional fields from the daily option universe file
     /// </summary>
-    public class AdditionalFields
+    public class OptionAdditionalFields : DerivativeUniverseGenerator.IAdditionalFields
     {
         public decimal IvRank { get; set; }
 
         public decimal IvPercentile { get; set; }
 
-        public const string Header = "ivrank,ivpercentile";
+        public string Header => "ivrank,ivpercentile";
 
-        public AdditionalFields(List<decimal> ivs)
+        public string Content => $"{IvRank},{IvPercentile}";
+
+        public void Update(List<decimal> ivs)
         {
             CalculateIvRank(ivs);
             CalculateIvPercentile(ivs);
