@@ -19,18 +19,30 @@ using System.Linq;
 namespace QuantConnect.DataSource.OptionsUniverseGenerator
 {
     /// <summary>
-    /// Calculate any additional fields from the daily option universe file
+    /// Option additional fields from the daily option universe file
     /// </summary>
     public class OptionAdditionalFields : DerivativeUniverseGenerator.IAdditionalFields
     {
+        /// <summary>
+        /// Implied Volatility Rank
+        /// </summary>
+        /// <remarks>The relative volatility over the past year</remarks>
         public decimal IvRank { get; set; }
 
+        /// <summary>
+        /// Implied Volatility Percentile
+        /// </summary>
+        /// <remarks>The ratio of the current implied volatility baing higher than that over the past year</remarks>
         public decimal IvPercentile { get; set; }
 
         public string Header => "ivrank,ivpercentile";
 
         public string Content => $"{IvRank},{IvPercentile}";
 
+        /// <summary>
+        /// Update the additional fields
+        /// </summary>
+        /// <param name="ivs">List of past year's ATM implied volatilities</param>
         public void Update(List<decimal> ivs)
         {
             CalculateIvRank(ivs);
