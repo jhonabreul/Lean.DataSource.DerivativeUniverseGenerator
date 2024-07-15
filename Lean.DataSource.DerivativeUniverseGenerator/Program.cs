@@ -73,6 +73,22 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
                 Environment.Exit(1);
             }
 
+            var optionsAdditionalFieldsGenerator = new AdditionalFieldGenerator(processingDate, outputFolderRoot);
+
+            try
+            {
+                if (!optionsAdditionalFieldsGenerator.Run())
+                {
+                    Log.Error($"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): Failed to generate options universe.");
+                    Environment.Exit(1);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, $"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): Error generating options universe.");
+                Environment.Exit(1);
+            }
+
             Log.Trace($"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): DONE in {timer.Elapsed:g}");
 
             Environment.Exit(0);
