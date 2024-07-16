@@ -13,6 +13,7 @@
  * limitations under the License.
 */
 
+using Microsoft.VisualStudio.Utilities;
 using QuantConnect.Logging;
 using System;
 using System.Collections.Generic;
@@ -29,6 +30,8 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
         private const string _priceHeader = "close";
         private const string _sidHeader = "#symbol_id";
         private const string _tickerHeader = "symbol_value";
+
+        private CircularBuffer<decimal> _vix = new(252);
 
         public OptionAdditionalFieldGenerator(DateTime processingDate, string rootPath)
             : base(processingDate, rootPath)
@@ -49,7 +52,10 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
                     var underlyingPrice = prices[0];
 
                     var additionalFields = new OptionAdditionalFields();
-                    additionalFields.Update(_processingDate, underlyingPrice, ivs, symbolPrices);
+                    var vixes = _vix.IsFull ? _vix.ToList() : null;
+                    additionalFields.Update(_processingDate, underlyingPrice, symbolPrices, ivs, vixes);
+                    var vix = additionalFields.Vix.HasValue ? additionalFields.Vix.Value : -1m;
+                    _vix.Add(vix);
 
                     WriteToCsv(latestFile, additionalFields);
                 }

@@ -20,19 +20,32 @@ using System.Linq;
 
 namespace QuantConnect.DataSource.OptionsUniverseGenerator
 {
+    /// <summary>
+    /// Volatility Index
+    /// </summary>
     public class Vix
     {
         private readonly List<Symbol> _contracts;
         private readonly Dictionary<Symbol, decimal> _symbolPrices;
         private readonly InterestRateProvider _interestRateProvider = new();
 
+        /// <summary>
+        /// Instantiate a new instance of a <see cref="Vix"> object
+        /// </summary>
+        /// <param name="symbolPrices"></param>
         public Vix(Dictionary<Symbol, decimal> symbolPrices)
         {
             _symbolPrices = symbolPrices;
             _contracts = symbolPrices.Keys.ToList();
         }
 
-        // source: https://cdn.cboe.com/api/global/us_indices/governance/Cboe_Volatility_Index_Mathematics_Methodology.pdf
+        /// <summary>
+        /// Calculate the Volatility Index
+        /// </summary>
+        /// <param name="currentDate">Current datetime</param>
+        /// <param name="underlyingPrice">Current price of the underlying security</param>
+        /// <returns>Volatility Index value</returns>
+        /// <remarks>source: https://cdn.cboe.com/api/global/us_indices/governance/Cboe_Volatility_Index_Mathematics_Methodology.pdf</remarks>
         public decimal CalculateVix(DateTime currentDate, decimal underlyingPrice)
         {
             // Bracket method of expiry selection
