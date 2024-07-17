@@ -13,6 +13,7 @@
  * limitations under the License.
 */
 
+using QuantConnect.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -55,6 +56,12 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
         /// <param name="additionalFields">The addtional field content</param>
         protected virtual void WriteToCsv(string csvPath, IAdditionalFields additionalFields)
         {
+            if (string.IsNullOrWhiteSpace(csvPath))
+            {
+                Log.Error("AdditionalFieldGenerator.WriteToCsv(): invalid file path provided");
+                return;
+            }
+
             var csv = File.ReadAllLines(csvPath)
                 .Where(s => !string.IsNullOrWhiteSpace(s))
                 .ToList();

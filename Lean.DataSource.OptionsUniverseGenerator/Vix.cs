@@ -93,12 +93,13 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
         {
             // Determine forward and K0 and obtain only ATM and OTM contracts
             var forward = FilterContracts(underlyingPrice, expiry, yearTillExpiry, out var otmMidPrice, out var timeMultiple);
-            if (otmMidPrice.Count < 3 || forward <= 0m)
+            var belowForward = otmMidPrice.Select(x => x.Key).Where(x => x <= forward).ToList();
+            if (belowForward.Count < 3 || forward <= 0m)
             {
                 variance = 0m;
                 return false;
             }
-            var k0 = otmMidPrice.Select(x => x.Key).Where(x => x <= forward).Max();
+            var k0 = belowForward.Max();
 
             // Get the first part of the vix equation: 2 / T * Σ_i { ΔK_i / K_i^2 * e^RT * Q(K_i) }
             var cumulativeVariance = 2 / yearTillExpiry * WeightedAveragePrice(otmMidPrice, timeMultiple);

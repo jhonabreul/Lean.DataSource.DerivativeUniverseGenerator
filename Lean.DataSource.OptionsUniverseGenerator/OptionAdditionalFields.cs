@@ -28,13 +28,13 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
         /// Implied Volatility Rank
         /// </summary>
         /// <remarks>The relative volatility over the past year</remarks>
-        public decimal IvRank { get; set; }
+        public decimal? IvRank { get; set; } = null;
 
         /// <summary>
         /// Implied Volatility Percentile
         /// </summary>
         /// <remarks>The ratio of the current implied volatility baing higher than that over the past year</remarks>
-        public decimal IvPercentile { get; set; }
+        public decimal? IvPercentile { get; set; } = null;
 
         /// <summary>
         /// Volatility Index
@@ -53,7 +53,8 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
 
         public string Header => "iv_rank,iv_percentile,vix,vix_iv_rank,vix_iv_percentile";
 
-        public string Content => $"{IvRank},{IvPercentile},{WriteNullableField(Vix)},{WriteNullableField(VixIvRank)},{WriteNullableField(VixIvPercentile)}";
+        public string Content => $"{WriteNullableField(IvRank)},{WriteNullableField(IvPercentile)},{WriteNullableField(Vix)}"
+            + $"{WriteNullableField(VixIvRank)},{WriteNullableField(VixIvPercentile)}";
 
         /// <summary>
         /// Update the additional fields
@@ -78,17 +79,17 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
         }
 
         // source: https://www.tastylive.com/concepts-strategies/implied-volatility-rank-percentile
-        private decimal CalculateIvRank(List<decimal> ivs)
+        private decimal? CalculateIvRank(List<decimal> ivs)
         {
             var oneYearLow = ivs.Min();
             return (ivs[^1] - oneYearLow) / (ivs.Max() - oneYearLow);
         }
 
         // source: https://www.tastylive.com/concepts-strategies/implied-volatility-rank-percentile
-        private decimal CalculateIvPercentile(List<decimal> ivs)
+        private decimal? CalculateIvPercentile(List<decimal> ivs)
         {
             var daysBelowCurrentIv = ivs.Count(x => x < ivs[^1]);
-            return daysBelowCurrentIv / ivs.Count;
+            return Convert.ToDecimal(daysBelowCurrentIv) / Convert.ToDecimal(ivs.Count);
         }
 
         private decimal? CalculateVix(DateTime currentDate, decimal underlyingPrice, Dictionary<Symbol, decimal> symbolPrices)

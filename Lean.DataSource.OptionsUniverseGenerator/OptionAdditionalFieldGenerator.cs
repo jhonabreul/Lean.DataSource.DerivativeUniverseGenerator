@@ -28,34 +28,46 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
         private const string _impliedVolHeader = "implied_volatility";
         private const string _deltaHeader = "delta";
         private const string _priceHeader = "close";
+        private const string _vixHeader = "vix";
         private const string _sidHeader = "#symbol_id";
         private const string _tickerHeader = "symbol_value";
 
-        private CircularBuffer<decimal> _vix = new(252);
+        private Dictionary<string, CircularBuffer<decimal>> _vix = new();
 
         public OptionAdditionalFieldGenerator(DateTime processingDate, string rootPath)
             : base(processingDate, rootPath)
         {
         }
 
-        public bool Run()
+        public override bool Run()
         {
             // per symbol
             try
             {
                 foreach (var subFolder in Directory.GetDirectories(_rootPath))
                 {
-                    var ivs = GetIvs(_processingDate, subFolder, out var latestFile);
-                    var prices = GetColumn(latestFile, _priceHeader);
-                    var symbols = GetSymbols(latestFile, _sidHeader, _tickerHeader);
-                    var symbolPrices = CreateContractDictionary(symbols, prices);
-                    var underlyingPrice = prices[0];
+                    // warm up vixes
+                    if (!_vix.TryGetValue(subFolder, out var vixes))
+                    {
+                        WarmUpVixes(_processingDate, subFolder);
+                        vixes = _vix[subFolder];
+                    }
 
+                    var ivs = GetIvs(_processingDate, subFolder, out var latestFile);
                     var additionalFields = new OptionAdditionalFields();
-                    var vixes = _vix.IsFull ? _vix.ToList() : null;
-                    additionalFields.Update(_processingDate, underlyingPrice, symbolPrices, ivs, vixes);
-                    var vix = additionalFields.Vix.HasValue ? additionalFields.Vix.Value : -1m;
-                    _vix.Add(vix);
+
+                    if (ivs.Count > 0)
+                    {
+                        var prices = GetColumn(latestFile, _priceHeader);
+                        var symbols = GetSymbols(latestFile, _sidHeader, _tickerHeader);
+                        var symbolPrices = CreateContractDictionary(symbols, prices);
+                        var underlyingPrice = prices[0];
+
+                        var vixList = vixes.IsFull ? vixes.ToList() : null;
+                        additionalFields.Update(_processingDate, underlyingPrice, symbolPrices, ivs, vixList);
+                        var vix = additionalFields.Vix.HasValue ? additionalFields.Vix.Value : -1m;
+                        vixes.Add(vix);
+                    }
 
                     WriteToCsv(latestFile, additionalFields);
                 }
@@ -63,11 +75,52 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
             catch (Exception ex)
             {
                 Log.Error(ex,
-                    $"AdditionalFieldGenerator.Run(): Error processing addtional fields for date {_processingDate:yyyy-MM-dd}");
+                    $"OptionAdditionalFieldGenerator.Run(): Error processing addtional fields for date {_processingDate:yyyy-MM-dd}");
                 return false;
             }
 
             return true;
+        }
+
+        private void WarmUpVixes(DateTime processingDate, string path)
+        {
+            _vix[path] = new(252);
+
+            var vixes = Directory.EnumerateFiles(path, "*.csv")
+                .Where(file => DateTime.TryParseExact(Path.GetFileNameWithoutExtension(file), "yyyyMMdd",
+                        CultureInfo.InvariantCulture, DateTimeStyles.None, out var fileDate)
+                    && fileDate > processingDate.AddYears(-1)
+                    && fileDate <= processingDate)
+                .OrderBy(file => file)
+                .Select(file => GetVix(file))
+                .Where(vix => vix > 0m)
+                .ToList();
+
+            foreach (var vix in vixes)
+            {
+                _vix[path].Add(vix);
+            }
+        }
+
+        private decimal GetVix(string path)
+        {
+            var lines = File.ReadAllLines(path)
+                   .Where(s => !string.IsNullOrWhiteSpace(s))
+                   .ToList();
+            var headers = lines[0].Split(',');
+            var vixIndex = Array.IndexOf(headers, _vixHeader);
+            if (vixIndex == -1 || lines.Count < 3)
+            {
+                return -1m;
+            }
+
+            var vix = lines[2].Split(',')[vixIndex];            // Skip header and underlying row
+
+            if (string.IsNullOrWhiteSpace(vix))
+            {
+                return -1m;
+            }
+            return decimal.Parse(vix);
         }
 
         private List<decimal> GetIvs(DateTime currentDateTime, string path, out string file)
@@ -81,7 +134,18 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
                     && fileDate <= currentDateTime)
                 .OrderBy(file => file)
                 .ToList();
+            
+            if (lastYearFiles.Count < 0)
+            {
+                file = string.Empty;
+                return new List<decimal>();
+            }
+
             file = lastYearFiles[^1];
+            if (lastYearFiles.Count < 252)
+            {
+                return new List<decimal>();
+            }
 
             return lastYearFiles.Select(csvFile => GetAtmIv(csvFile))
                 .ToList();
@@ -93,19 +157,19 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
                 .Where(s => !string.IsNullOrWhiteSpace(s))
                 .ToList();
             var headers = lines[0].Split(',');
-            int deltaIndex = Array.IndexOf(headers, _deltaHeader);
-            int ivIndex = Array.IndexOf(headers, _impliedVolHeader);
+            var deltaIndex = Array.IndexOf(headers, _deltaHeader);
+            var ivIndex = Array.IndexOf(headers, _impliedVolHeader);
 
             if (deltaIndex == -1 || ivIndex == -1)
             {
                 return 0m;
             }
 
-            return Enumerable.Range(1, lines.Count - 1)
-                .AsParallel()
-                .Select(i =>
+            // Skip underlying row
+            return lines.Skip(2)
+                .Select(line =>
                 {
-                    var values = lines[i].Split(',');
+                    var values = line.Split(',');
                     var delta = decimal.Parse(values[deltaIndex]);
                     var iv = decimal.Parse(values[ivIndex]);
                     return (Delta: delta, ImpliedVolatility: iv);

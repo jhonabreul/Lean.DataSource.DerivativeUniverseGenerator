@@ -20,6 +20,7 @@ using System;
 
 using QuantConnect.Configuration;
 using QuantConnect.Logging;
+using System.IO;
 
 namespace QuantConnect.DataSource.DerivativeUniverseGenerator
 {
@@ -73,7 +74,8 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
                 Environment.Exit(1);
             }
 
-            var optionsAdditionalFieldsGenerator = GetAdditionalFieldGenerator(processingDate, outputFolderRoot);
+            var outputUniversePath = Path.Combine(outputFolderRoot, securityType.SecurityTypeToLower(), market, "universes");
+            var optionsAdditionalFieldsGenerator = GetAdditionalFieldGenerator(processingDate, outputUniversePath);
 
             try
             {
