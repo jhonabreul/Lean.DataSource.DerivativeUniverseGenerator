@@ -40,6 +40,10 @@
 	-->
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.VisualStudio.Utilities" Version="17.9.*" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<ProjectReference Include="..\Lean.DataSource.DerivativeUniverseGenerator\QuantConnect.DataSource.DerivativeUniverseGenerator.csproj" />
 	</ItemGroup>
 
