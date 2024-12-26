@@ -40,7 +40,7 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
     {
         protected readonly DateTime _processingDate;
         protected readonly SecurityType _securityType;
-        protected readonly string _market;
+        protected readonly string[] _markets;
         protected readonly string _dataFolderRoot;
         protected readonly string _outputFolderRoot;
 
@@ -67,12 +67,12 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
         /// <param name="market">Market of data to process</param>
         /// <param name="dataFolderRoot">Path to the data folder</param>
         /// <param name="outputFolderRoot">Path to the output folder</param>
-        public DerivativeUniverseGenerator(DateTime processingDate, SecurityType securityType, string market, string dataFolderRoot,
+        public DerivativeUniverseGenerator(DateTime processingDate, SecurityType securityType, string[] markets, string dataFolderRoot,
             string outputFolderRoot)
         {
             _processingDate = processingDate;
             _securityType = securityType;
-            _market = market;
+            _markets = markets;
             _dataFolderRoot = dataFolderRoot;
             _outputFolderRoot = outputFolderRoot;
 
@@ -102,18 +102,21 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
         /// </summary>
         public bool Run()
         {
-            Log.Trace($"DerivativeUniverseGenerator.Run(): Processing {_securityType}-{_market} universes for date {_processingDate:yyyy-MM-dd}");
+            Log.Trace($"DerivativeUniverseGenerator.Run(): Processing {_securityType}-{string.Join(", ", _markets)} " +
+                $"universes for date {_processingDate:yyyy-MM-dd}");
 
             try
             {
                 var symbols = GetSymbols();
-                Log.Trace($"DerivativeUniverseGenerator.Run(): found {symbols.Count} underlying symbols with {symbols.Sum(x => x.Value.Count)} derivative symbols");
+                Log.Trace($"DerivativeUniverseGenerator.Run(): found {symbols.Count} underlying symbols with " +
+                    $"{symbols.Sum(x => x.Value.Count)} derivative symbols");
                 return GenerateUniverses(symbols);
             }
             catch (Exception ex)
             {
                 Log.Error(ex,
-                    $"DerivativeUniverseGenerator.Run(): Error processing {_securityType}-{_market} universes for date {_processingDate:yyyy-MM-dd}");
+                    $"DerivativeUniverseGenerator.Run(): Error processing {_securityType}-{string.Join(", ", _markets)} " +
+                    $"universes for date {_processingDate:yyyy-MM-dd}");
                 return false;
             }
         }
@@ -123,7 +126,7 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
         /// </summary>
         protected virtual Dictionary<Symbol, List<Symbol>> GetSymbols()
         {
-            var symbolChainProvider = new ChainSymbolProvider(_dataCacheProvider, _processingDate, _securityType, _market, _dataFolderRoot);
+            var symbolChainProvider = new ChainSymbolProvider(_dataCacheProvider, _processingDate, _securityType, _markets, _dataFolderRoot);
             return symbolChainProvider.GetSymbols();
         }
 

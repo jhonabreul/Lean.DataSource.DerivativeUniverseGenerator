@@ -34,10 +34,11 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
             program.MainImpl(args);
         }
 
-        protected override DerivativeUniverseGenerator.DerivativeUniverseGenerator GetUniverseGenerator(SecurityType securityType, string market,
-            string dataFolderRoot, string outputFolderRoot, DateTime processingDate)
+        protected override DerivativeUniverseGenerator.DerivativeUniverseGenerator GetUniverseGenerator(
+            SecurityType securityType, string[] markets, string dataFolderRoot, string outputFolderRoot,
+            DateTime processingDate)
         {
-            return new OptionsUniverseGenerator(processingDate, securityType, market, dataFolderRoot, outputFolderRoot);
+            return new OptionsUniverseGenerator(processingDate, securityType, markets, dataFolderRoot, outputFolderRoot);
         }
     }
 }

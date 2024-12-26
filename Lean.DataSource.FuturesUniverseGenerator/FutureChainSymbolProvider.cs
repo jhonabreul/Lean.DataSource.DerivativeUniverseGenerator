@@ -31,18 +31,18 @@ namespace QuantConnect.DataSource.FuturesUniverseGenerator
         /// Initializes a new instance of the <see cref="FutureChainSymbolProvider"/> class
         /// </summary>
         public FutureChainSymbolProvider(IDataCacheProvider dataCacheProvider, DateTime processingDate, SecurityType securityType,
-            string market, string dataFolderRoot)
-            : base(dataCacheProvider, processingDate, securityType, market, dataFolderRoot)
+            string[] markets, string dataFolderRoot)
+            : base(dataCacheProvider, processingDate, securityType, markets, dataFolderRoot)
         {
         }
 
-        protected override IEnumerable<string> GetZipFileNames(DateTime date, Resolution resolution, TickType tickType)
+        protected override IEnumerable<string> GetZipFileNames(DateTime date, Resolution resolution, TickType tickType, string folder)
         {
             var tickTypeLower = tickType.TickTypeToLower();
 
             if (resolution == Resolution.Minute)
             {
-                var basePath = Path.Combine(_dataSourceFolder, resolution.ResolutionToLower());
+                var basePath = Path.Combine(folder, resolution.ResolutionToLower());
                 var dateStr = date.ToString("yyyyMMdd");
 
                 return Directory.EnumerateDirectories(basePath, "*", new EnumerationOptions() { RecurseSubdirectories = true, MaxRecursionDepth = 1 })
@@ -54,7 +54,7 @@ namespace QuantConnect.DataSource.FuturesUniverseGenerator
             {
                 try
                 {
-                    return Directory.EnumerateFiles(Path.Combine(_dataSourceFolder, resolution.ResolutionToLower()), $"*_{tickTypeLower}.zip")
+                    return Directory.EnumerateFiles(Path.Combine(folder, resolution.ResolutionToLower()), $"*_{tickTypeLower}.zip")
                         .Where(fileName =>
                         {
                             var fileInfo = new FileInfo(fileName);

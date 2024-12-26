@@ -31,7 +31,7 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
     {
         private readonly IDataCacheProvider _dataCacheProvider;
         protected readonly DateTime _processingDate;
-        protected readonly string _dataSourceFolder;
+        protected readonly string[] _dataSourceFolders;
         protected readonly SecurityType _securityType;
 
         // 99% of cases will use quote zip files to get the contracts, but in rear cases we may need to use trade zip files. e.g EUREX data
@@ -48,12 +48,12 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
         /// <summary>
         /// Creates a new instance
         /// </summary>
-        public ChainSymbolProvider(IDataCacheProvider dataCacheProvider, DateTime processingDate, SecurityType securityType, string market,
-            string dataFolderRoot)
+        public ChainSymbolProvider(IDataCacheProvider dataCacheProvider, DateTime processingDate, SecurityType securityType,
+            string[] markets, string dataFolderRoot)
         {
             _processingDate = processingDate;
             _securityType = securityType;
-            _dataSourceFolder = Path.Combine(dataFolderRoot, securityType.SecurityTypeToLower(), market);
+            _dataSourceFolders = markets.Select(market => Path.Combine(dataFolderRoot, securityType.SecurityTypeToLower(), market)).ToArray();
             _dataCacheProvider = dataCacheProvider;
         }
 
@@ -97,13 +97,13 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
         /// <summary>
         /// Gets the zip file names for the canonical symbols where the contracts or universe constituents will be read from.
         /// </summary>
-        protected virtual IEnumerable<string> GetZipFileNames(DateTime date, Resolution resolution, TickType tickType)
+        protected virtual IEnumerable<string> GetZipFileNames(DateTime date, Resolution resolution, TickType tickType, string folder)
         {
             var tickTypeLower = tickType.TickTypeToLower();
 
             if (resolution == Resolution.Minute)
             {
-                var basePath = Path.Combine(_dataSourceFolder, resolution.ResolutionToLower());
+                var basePath = Path.Combine(folder, resolution.ResolutionToLower());
                 var directories = _securityType != SecurityType.FutureOption
                     ? Directory.EnumerateDirectories(basePath)
                     : Directory.EnumerateDirectories(basePath, "*", new EnumerationOptions() { RecurseSubdirectories = true, MaxRecursionDepth = 1 });
@@ -122,7 +122,7 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
                 try
                 {
                     return Directory.EnumerateFiles(
-                        Path.Combine(_dataSourceFolder, resolution.ResolutionToLower()),
+                        Path.Combine(folder, resolution.ResolutionToLower()),
                         $"*{dateStr}*.zip",
                         SearchOption.AllDirectories)
                         .Where(fileName =>
@@ -144,16 +144,25 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
         /// </summary>
         private IEnumerable<string> GetZipFileNames(DateTime date, Resolution resolution)
         {
-            foreach (var tickType in _symbolsDataTickTypes)
+            foreach (var folder in _dataSourceFolders)
             {
-                var fileNames = GetZipFileNames(date, resolution, tickType).ToList();
-                if (fileNames.Count > 0)
+                foreach (var tickType in _symbolsDataTickTypes)
                 {
-                    return fileNames;
+                    var fileNames = GetZipFileNames(date, resolution, tickType, folder);
+                    var yielded = false;
+                    foreach (var fileName in fileNames)
+                    {
+                        yield return fileName;
+                        yielded |= true;
+                    }
+
+                    if (yielded)
+                    {
+                        // If we found a file for this tick type, we don't need to look for the other tick types
+                        break;
+                    }
                 }
             }
-
-            return Enumerable.Empty<string>();
         }
 
         /// <summary>

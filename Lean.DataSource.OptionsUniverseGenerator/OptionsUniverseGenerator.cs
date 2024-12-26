@@ -36,12 +36,12 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
         /// </summary>
         /// <param name="processingDate">The processing date</param>
         /// <param name="securityType">Option security type to process</param>
-        /// <param name="market">Market of data to process</param>
+        /// <param name="markets">Markets of data to process</param>
         /// <param name="dataFolderRoot">Path to the data folder</param>
         /// <param name="outputFolderRoot">Path to the output folder</param>
-        public OptionsUniverseGenerator(DateTime processingDate, SecurityType securityType, string market, string dataFolderRoot,
+        public OptionsUniverseGenerator(DateTime processingDate, SecurityType securityType, string[] markets, string dataFolderRoot,
             string outputFolderRoot)
-            : base(processingDate, securityType, market, dataFolderRoot, outputFolderRoot)
+            : base(processingDate, securityType, markets, dataFolderRoot, outputFolderRoot)
         {
             if (!_supportedSecurityTypes.Contains(securityType))
             {

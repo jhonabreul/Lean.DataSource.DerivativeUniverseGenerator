@@ -46,11 +46,11 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
 
         protected virtual void MainImpl(string[] args, string[] argNamesToIgnore = null)
         {
-            Initialize(args, out var securityType, out var market, out var dataFolderRoot, out var outputFolderRoot,
+            Initialize(args, out var securityType, out var markets, out var dataFolderRoot, out var outputFolderRoot,
                 argNamesToIgnore ?? Array.Empty<string>());
 
             Log.Trace($"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): " +
-                $"Security type: {securityType}. Market: {market}. Data folder: {dataFolderRoot}. Output folder: {outputFolderRoot}");
+                $"Security type: {securityType}. Markets: {string.Join(", ", markets)}. Data folder: {dataFolderRoot}. Output folder: {outputFolderRoot}");
             Log.DebuggingEnabled = Config.GetBool("debug-mode");
 
             var dateStr = Environment.GetEnvironmentVariable(DataFleetDeploymentDateEnvVariable) ?? $"{DateTime.UtcNow.Date:yyyyMMdd}";
@@ -80,13 +80,13 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
             Environment.Exit(0);
         }
 
-        protected abstract DerivativeUniverseGenerator GetUniverseGenerator(SecurityType securityType, string market, string dataFolderRoot,
+        protected abstract DerivativeUniverseGenerator GetUniverseGenerator(SecurityType securityType, string[] markets, string dataFolderRoot,
             string outputFolderRoot, DateTime processingDate);
 
         /// <summary>
         /// Validate and extract command line args and configuration options.
         /// </summary>
-        protected virtual void Initialize(string[] args, out SecurityType securityType, out string market, out string dataFolderRoot,
+        protected virtual void Initialize(string[] args, out SecurityType securityType, out string[] markets, out string dataFolderRoot,
             out string outputFolderRoot, string[] argNamesToIgnore)
         {
             var argsData = args.Select(x => x.Split('=')).ToDictionary(x => x[0], x => x.Length > 1 ? x[1] : null);
@@ -108,10 +108,15 @@ namespace QuantConnect.DataSource.DerivativeUniverseGenerator
                 securityType = default;
             }
 
-            if (!argsData.TryGetValue("--market", out market) && !Config.TryGetValue("market", out market) || string.IsNullOrEmpty(market))
+            if (!argsData.TryGetValue("--market", out var marketsStr) &&
+                !Config.TryGetValue("market", out marketsStr) || string.IsNullOrEmpty(marketsStr))
             {
-                market = Market.USA;
-                Log.Trace($"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): no market given, defaulting to '{market}'");
+                markets = [Market.USA];
+                Log.Trace($"QuantConnect.DataSource.DerivativeUniverseGenerator.Program.Main(): no market given, defaulting to '{Market.USA}'");
+            }
+            else
+            {
+                markets = marketsStr.Split(",").Select(x => x.Trim()).ToArray();
             }
 
             // TODO: Should we set the "data-folder" config to "processed-data-directory"?

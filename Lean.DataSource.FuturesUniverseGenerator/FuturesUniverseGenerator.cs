@@ -28,11 +28,11 @@ namespace QuantConnect.DataSource.FuturesUniverseGenerator
         /// Initializes a new instance of the <see cref="FuturesUniverseGenerator" /> class.
         /// </summary>
         /// <param name="processingDate">The processing date</param>
-        /// <param name="market">Market of data to process</param>
+        /// <param name="markets">Markets of data to process</param>
         /// <param name="dataFolderRoot">Path to the data folder</param>
         /// <param name="outputFolderRoot">Path to the output folder</param>
-        public FuturesUniverseGenerator(DateTime processingDate, string market, string dataFolderRoot, string outputFolderRoot)
-            : base(processingDate, SecurityType.Future, market, dataFolderRoot, outputFolderRoot)
+        public FuturesUniverseGenerator(DateTime processingDate, string[] markets, string dataFolderRoot, string outputFolderRoot)
+            : base(processingDate, SecurityType.Future, markets, dataFolderRoot, outputFolderRoot)
         {
         }
 
@@ -43,7 +43,7 @@ namespace QuantConnect.DataSource.FuturesUniverseGenerator
 
         protected override Dictionary<Symbol, List<Symbol>> GetSymbols()
         {
-            var symbolChainProvider = new FutureChainSymbolProvider(_dataCacheProvider, _processingDate, _securityType, _market, _dataFolderRoot);
+            var symbolChainProvider = new FutureChainSymbolProvider(_dataCacheProvider, _processingDate, _securityType, _markets, _dataFolderRoot);
             return symbolChainProvider.GetSymbols();
         }
     }
