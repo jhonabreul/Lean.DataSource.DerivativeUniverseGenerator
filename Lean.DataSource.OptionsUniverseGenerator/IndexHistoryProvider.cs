@@ -158,14 +158,11 @@ namespace QuantConnect.DataSource.OptionsUniverseGenerator
 
                     try
                     {
-                        using var response = _httpClient.GetAsync(uri).Result;
-                        if (response.StatusCode != HttpStatusCode.OK)
+                        if (!_httpClient.TryDownloadData(uri, out var content, out var statusCode))
                         {
-                            Log.Error($"IndexHistoryProvider.GetHistory(): Failed to get history for {symbol}. Status code: {response.StatusCode}.");
+                            Log.Error($"IndexHistoryProvider.GetHistory(): Failed to get history for {symbol}. Status code: {statusCode}.");
                             continue;
                         }
-
-                        var content = response.Content.ReadAsStringAsync().Result;
 
                         // Log the response content for debugging purposes
                         Log.Trace($"IndexHistoryProvider.GetHistory(): Response content for {request.Symbol}-{request.Resolution}-{request.TickType}: {content}");
